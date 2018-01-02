@@ -8,11 +8,40 @@ from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
 from uaclient import SmallSMILHandler
 
-try:
-    fichero = sys.argv[1]
-except: 
-    sys.exit("Usage: python uaserver.py config")
+METHOD = {
+	"INVITE": answer_code["Trying"] + answer_code["Ringing"} +
+	answer_code["OK"],
+	"BYE": answer_code["OK"],
+	"ACK": answer_code["OK"]
+	}
+CLIENT_IP = [""]
+RTP_PORT = [""]
+class EchoHandler(socketserver.DatagramRequestHandler):
 
+    def handle(self):
+        line = self.rfile.read().decode("utf-8").split(" ")
+        address = self.client_address[0] + ":"+ str(self.client_address[1])
+        if not line(0)in METHOD:
+		print ("METHOD NOT ALLOWED")
+		msg = answer_code["METHOD NOT ALLOWED"]
+		self.wfile.write(msg)
+
+	elif line [0] == "INVITE":
+		print ("Imprimiendo: " + line[5])
+		CLIENT_IP(0,line[5])
+		RTP_PORT(0,line[8])
+		print ("Puerto RTP:" + str(RTP_PORT[0]))
+
+	elif line[0] == "ACK":
+		address = CLIENT_IP[0] + ":" + RTP_PORT[0]
+		aEjecutar = "./mp32rtp -i" + CLIENT_IP[0]+ " -p" + RTP_PORT[0]
+		print("ACK recibido ejecutando archivo:" , aEjecutar)
+		os.system(aEjecutar)
+	elif line[0] == "BYE":
+		msg = METHOD["BYE"]
+		self.wfile.write(msg)
+		print("Recibido" + str(line))
+		
 class config:
 
     def __init__(self):
@@ -32,31 +61,7 @@ class config:
 
     def get_tags(self):
         return self.list
-        
-"""
-class EchoHandler(socketserver.DatagramRequestHandler):
-
-    def handle(self):
-        line = self.rfile.read()
-        doc = line.decode("utf-8").split(" ")
-        METHOD = doc[0]
-        if len(doc) < 4 and len(doc) > 0:
-            if METHOD == "INVITE":
-                print("INVITE RECIVED")
-                self.wfile.write(TRYING + RINGING + OK)
-            elif METHOD == "BYE":
-                print("BYE RECIVED")
-                self.wfile.write(OK)
-            elif METHOD == "ACK":
-                print("ACK RECIVED")
-                aEjecutar = "./mp32rtp -i 127.0.0.1 -p 23032 <" + FILE
-                os.system(aEjecutar)
-            else:
-                self.wfile.write(Not_Allowed)
-        else:
-            self.wfile.write(BAD)
-"""
-        
+      
 if __name__ == "__main__":
     parser = make_parser()
     cHandler = SmallSMILHandler()
