@@ -3,9 +3,9 @@
 
 import sys
 import socket
+import time
 from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
-import time
 
 #variables de configuración.
 try:
@@ -80,46 +80,47 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
 		Log(log_file, tiempo, event)
 		try:
 			data = my_socket.recv(1024)
-			event = ' Received from ' + Proxy_IP + ':'
-			event += Proxy_Port + ': ' + data.decode('utf-8')
+			event = " Received from " + Proxy_IP + ':'
+			event += str(Proxy_Port) + ": " + data.decode('utf-8')
 			tiempo = time.gmtime(time.time())
 			Log(log_file, tiempo, event)
+			DECODED = data.decode('utf-8').split()
+			if DECODED[1] == "401":
+				nonce = DECODED[-1].split('=')[1]
+				m = hashlib.sha1()
+				m.update(bytes(nonce, 'utf-8'))
+				m.update(bytes(contraseña, 'utf-8'))
+				response = m.hexdigest()
+				LINE += 'Authorization: Digest response=' + response
+				print('Enviando: ' + LINE)
+
+				my_socket.send(bytes(LINE, 'utf-8') + b'\r\n\r\n')
+				evento = ' Sent to ' + proxy_IP + ':'
+				evento += Proxy_Port + ': ' + LINE
+				tiempo = time.gmtime(time.time())
+				Log(log_file, tiempo, evento)
+
+				data_recv = my_socket.recv(int(proxy_port))
+
+				evento = ' Received from ' + proxy_IP + ':'
+				evento += proxy_port + ': ' + data.decode('utf-8')
+				tiempo = time.gmtime(time.time())
+				Log(log_file, tiempo, evento)
+
 		except ConnectionRefusedError:
 		    	sys.exit("Connection Refused")
-		DECODED = data.decode('utf-8').split()
-		if DECODE[1] == "401":
-			nonce = data_recibido[-1].split('=')[1]
-			m = hashlib.sha1()
-			m.update(bytes(nonce, 'utf-8'))
-			m.update(bytes(contraseña, 'utf-8'))
-			response = m.hexdigest()
-			LINE += 'Authorization: Digest response=' + response
-			print('Enviando: ' + LINE)
-
-			my_socket.send(bytes(LINE, 'utf-8') + b'\r\n\r\n')
-			evento = ' Sent to ' + proxy_IP + ':'
-			evento += Proxy_Port + ': ' + LINE
-			tiempo = time.gmtime(time.time())
-			Log(log_file, tiempo, evento)
-
-			data_recv = my_socket.recv(int(proxy_port))
-
-			evento = ' Received from ' + proxy_IP + ':'
-			evento += proxy_port + ': ' + data.decode('utf-8')
-			tiempo = time.gmtime(time.time())
-			Log(log_file, tiempo, evento)
 
 	elif METHOD == "INVITE":
-		SDPHEAD ="Content_Type: application/sdp\r\n\r\n" + "v=0\r\no=" 
-		SDPHEAD += My_Name + " " + My_IP  \
+		SDPHEAD ="\r\n\r\nContent_Type: application/sdp\r\n" + "v=0\r\n" 
+		SDPHEAD += "o=" + My_Name + " " + My_IP  \
 		   		 + "\r\ns=" + "sesionPrueba\r\nt=0\r\nm=audio " \
 		           	 + tags["rtpaudio_puerto"] + " RTP"
-		LINE = method + " sip:" + OPTION \
-    		+ " SIP/2.0" + SDPHead
+		LINE = METHOD + " sip:" + OPTION \
+    		+ " SIP/2.0" + SDPHEAD
 		my_socket.send(bytes(LINE, 'utf-8'))
 		print("Enviando: " + LINE)
 		event = ' Sent to ' + Proxy_IP + ':'
-		event += Proxy_Port + ': ' + LINE
+		event += str(Proxy_Port) + ': ' + LINE
 		tiempo = time.gmtime(time.time())
 		Log(log_file, tiempo, event)
 		try:
@@ -128,7 +129,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
 			sys.exit("ConnectionRefused")
 		DECODED = data.decode('utf-8').split()
 		event = ' Received from ' + Proxy_IP + ':'
-		event += Proxy_Port + ': ' + data.decode('utf-8')
+		event += str(Proxy_Port) + ': ' + data.decode('utf-8')
 		tiempo = time.gmtime(time.time())
 		Log(log_file, tiempo, event)
 		if len(DECODED) != 0:
@@ -137,21 +138,21 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
 				print("Enviando: " + LINE)
 				my_socket.send(bytes(ACK, "utf-8"))
 				event = ' Received from ' + Proxy_IP + ':'
-				event += Proxy_Port + ': ' + data.decode('utf-8')
+				event += str(Proxy_Port) + ': ' + data.decode('utf-8')
 				tiempo = time.gmtime(time.time())
 				Log(log_file, tiempo, event)
 			elif DECODED[1] == "404":
 			    sys.exit("User not registered, Use REGISTER METHOD")
+
 
 	elif METHOD == "BYE":
 		LINE = METHOD + " sip:" + OPTION + " SIP/2.0"
 		print("Enviando: " + LINE)
 		my_socket.send(bytes(LINE, "utf-8") + b"\r\n")
 		event = ' Sent to ' + Proxy_IP + ':'
-		event += Proxy_Port + ': ' + LINE
+		event += str(Proxy_Port) + ': ' + LINE
 		tiempo = time.gmtime(time.time())
 		Log(log_file, tiempo, event)
 
-event = ' Finishing.'
-tiempo = time.gmtime(time.time())
-Log(log_file, tiempo, event)
+	else:
+		sys.exit("Method Not Allowed")
