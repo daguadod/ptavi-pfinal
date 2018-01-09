@@ -52,9 +52,9 @@ Proxy_IP = tags["regproxy_ip"]
 Proxy_Port = int(tags["regproxy_puerto"])
 log_file = tags["log_path"]
 
-#Creamos o usamos el fichero de registro "Log"
+#Creamos o usamos el fichero de registro "log"
 
-def Log(log_file, tiempo, evento):
+def log(log_file, evento):
 
 	fichero = open(log_file, 'a')
 	tiempo = time.gmtime(time.time())
@@ -76,14 +76,12 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
 		my_socket.send(bytes(LINE, 'utf-8'))
 		print ("Sending: " + LINE)
 		event = " sent to " + Proxy_IP + ":" + str(Proxy_Port) + ":" + LINE
-		tiempo = time.gmtime(time.time())
-		Log(log_file, tiempo, event)
+		Log(log_file, event)
 		try:
 			data = my_socket.recv(1024)
 			event = " Received from " + Proxy_IP + ':'
 			event += str(Proxy_Port) + ": " + data.decode('utf-8')
-			tiempo = time.gmtime(time.time())
-			Log(log_file, tiempo, event)
+			Log(log_file, event)
 			DECODED = data.decode('utf-8').split()
 			if DECODED[1] == "401":
 				nonce = DECODED[-1].split('=')[1]
@@ -97,15 +95,13 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
 				my_socket.send(bytes(LINE, 'utf-8') + b'\r\n\r\n')
 				evento = ' Sent to ' + proxy_IP + ':'
 				evento += Proxy_Port + ': ' + LINE
-				tiempo = time.gmtime(time.time())
-				Log(log_file, tiempo, evento)
+				log(log_file, evento)
 
 				data_recv = my_socket.recv(int(proxy_port))
 
 				evento = ' Received from ' + proxy_IP + ':'
 				evento += proxy_port + ': ' + data.decode('utf-8')
-				tiempo = time.gmtime(time.time())
-				Log(log_file, tiempo, evento)
+				log(log_file, evento)
 
 		except ConnectionRefusedError:
 		    	sys.exit("Connection Refused")
@@ -113,16 +109,15 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
 	elif METHOD == "INVITE":
 		SDPHEAD ="\r\n\r\nContent_Type: application/sdp\r\n" + "v=0\r\n" 
 		SDPHEAD += "o=" + My_Name + " " + My_IP  \
-		   		 + "\r\ns=" + "sesionPrueba\r\nt=0\r\nm=audio " \
-		           	 + tags["rtpaudio_puerto"] + " RTP"
+		  	+ "\r\ns=" + "sesionPrueba\r\nt=0\r\nm=audio " \
+	           	+ tags["rtpaudio_puerto"] + " RTP"
 		LINE = METHOD + " sip:" + OPTION \
-    		+ " SIP/2.0" + SDPHEAD
+    			+ " SIP/2.0" + SDPHEAD
 		my_socket.send(bytes(LINE, 'utf-8'))
 		print("Enviando: " + LINE)
 		event = ' Sent to ' + Proxy_IP + ':'
 		event += str(Proxy_Port) + ': ' + LINE
-		tiempo = time.gmtime(time.time())
-		Log(log_file, tiempo, event)
+		log(log_file, event)
 		try:
 			data = my_socket.recv(1024)
 		except ConnectionRefusedError:
@@ -130,8 +125,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
 		DECODED = data.decode('utf-8').split()
 		event = ' Received from ' + Proxy_IP + ':'
 		event += str(Proxy_Port) + ': ' + data.decode('utf-8')
-		tiempo = time.gmtime(time.time())
-		Log(log_file, tiempo, event)
+		log(log_file, event)
 		if len(DECODED) != 0:
 			if DECODED[1] == "100" and DECODED[4] == "180":
 				ACK = "ACK sip:" + OPTION + "SIP/2.0"
@@ -139,8 +133,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
 				my_socket.send(bytes(ACK, "utf-8"))
 				event = ' Received from ' + Proxy_IP + ':'
 				event += str(Proxy_Port) + ': ' + data.decode('utf-8')
-				tiempo = time.gmtime(time.time())
-				Log(log_file, tiempo, event)
+				log(log_file, event)
 			elif DECODED[1] == "404":
 			    sys.exit("User not registered, Use REGISTER METHOD")
 
@@ -151,8 +144,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
 		my_socket.send(bytes(LINE, "utf-8") + b"\r\n")
 		event = ' Sent to ' + Proxy_IP + ':'
 		event += str(Proxy_Port) + ': ' + LINE
-		tiempo = time.gmtime(time.time())
-		Log(log_file, tiempo, event)
+		log(log_file, event)
 
 	else:
 		sys.exit("Method Not Allowed")
