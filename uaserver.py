@@ -38,7 +38,8 @@ parser.setContentHandler(cHandler)
 parser.parse(open(FICHERO))
 tags = cHandler.get_tags()
 
-def Log(log_file, tiempo, evento):
+def log(log_file, evento):
+
 	fichero = open(log_file, 'a')
 	tiempo = time.gmtime(time.time())
 	fichero.write(time.strftime('%Y%m%d%H%M%S', tiempo))
@@ -52,10 +53,10 @@ METHOD = {
 	"Not_Allowed": "SIP/2.0 405 Method Not Allowed\r\n\r\n",
 	"Bad_Request": "SIP/2.0 400 Bad Request"
 	}
-
+    
 My_IP = tags["uaserver_ip"]
 if My_IP == "":
-	My_IP == "127.0.0.1"
+	My_IP = "127.0.0.1"
 My_Name = tags["account_username"]
 My_Password = tags["account_passwd"]
 My_IP = tags["uaserver_ip"]
@@ -65,6 +66,10 @@ Proxy_Port = int(tags["regproxy_puerto"])
 log_file = tags["log_path"]
 RTP_PORT = tags["rtpaudio_puerto"]
 audio_file = tags["audio_path"]
+
+
+event = " Starting uaserver..."
+log(log_file, event)
 
 class EchoHandler(socketserver.DatagramRequestHandler):
 
@@ -77,8 +82,7 @@ class EchoHandler(socketserver.DatagramRequestHandler):
 		
 		address = self.client_address[0] + ":"+ str(self.client_address[1])
 		event = " Received from" + Proxy_IP + ":" + str(Proxy_Port) + ": " + linea
-		tiempo = time.gmtime(time.time())
-		Log(log_file, tiempo, event)
+		log(log_file, event)
 		if LINE[0] == "INVITE":
 			v = "v=0\r\n"
 			o = "o=" + My_Name + " " + My_IP
@@ -91,8 +95,7 @@ class EchoHandler(socketserver.DatagramRequestHandler):
 			self.wfile.write(bytes(ANSW, 'utf-8'))
 			event = ' Sent to ' + Proxy_IP + ':'
 			event += str(Proxy_Port) + ': ' + ANSW
-			tiempo = time.gmtime(time.time())
-			Log(log_file, tiempo, event)
+			log(log_file, event)
 
 			self.rtp_user = LINE[6].split("=")[1]
 			self.rtp_list.append(self.rtp_user)
@@ -105,13 +108,13 @@ class EchoHandler(socketserver.DatagramRequestHandler):
 
 		elif LINE[0] == "ACK":
 			aEjecutar = "./mp32rtp -i " + self.rtp_list[1] + " -p " + self.rtp_list[2]
-			aEjecutar += " <" + audio_file
+			aEjecutar += " < " + audio_file
 			print("ACK recibido ejecutando archivo:" , aEjecutar)
+			os.system('chmod 777 mp32rtp')
 			os.system(aEjecutar)
 			event = ' Sending to ' + self.rtp_list[1] + ":"
 			event += self.rtp_list[2] + ": " + "audio_file"
-			tiempo = time.gmtime(time.time())
-			Log(log_file, tiempo, event)
+			log(log_file, event)
 
 		elif LINE[0] == "BYE":
 			ANSW = METHOD["BYE"]
@@ -120,36 +123,28 @@ class EchoHandler(socketserver.DatagramRequestHandler):
 
 			event = ' Sent to ' + proxy_IP + ':'
 			event += proxy_port + ': ' + ANSW
-			tiempo = time.gmtime(time.time())
-			Log(log_file, tiempo, event)
+			log(log_file, event)
 
 		elif not LINE[0] in METHOD:
 			ANSW = METHOD["Not_Allowed"]
 			self.wfile.write(bytes(ANSW, 'utf-8'))
 			event = ' Sent to ' + Proxy_IP + ':'
 			event += str(Proxy_Port) + ': ' + ANSW
-			tiempo = time.gmtime(time.time())
-			Log(log_file, tiempo, event)
+			log(log_file, event)
 
 		else:
 			ANSW = METHOD["Bad_Request"]
 			self.wfile.write(bytes(ANSW, 'utf-8'))
 			event = ' Sent to ' + proxy_IP + ':'
 			event += Proxy_Port + ': ' + ANSW
-			tiempo = time.gmtime(time.time())
-			Log(log_file, tiempo, event)
+			log(log_file, event)
 
-event = ' Starting uaserver...'
-tiempo = time.gmtime(time.time())
-Log(log_file, tiempo, event)
 if __name__ == "__main__":
-
-	try:
-		serv = socketserver.UDPServer(("",int(My_Port)), EchoHandler)
-		print("Listening...")
-		serv.serve_forever()
-	except KeyboardInterrupt:
-		event = ' Finishing uaserver.'
-		tiempo = time.gmtime(time.time())
-		Log(log_file, tiempo, event)
-		sys.exit('\r\nFinished uaserver')
+    try:
+        serv = socketserver.UDPServer((My_IP,int(My_Port)), EchoHandler)
+        print("Listening...")
+        serv.serve_forever()
+    except KeyboardInterrupt:
+        event = ' Finishing uaserver.'
+        log(log_file, event)
+        sys.exit('\r\nFinished uaserver')
