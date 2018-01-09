@@ -137,6 +137,9 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
 					word = linea[1].split("\r\n")
 					if linea[0] == self.user:
 						password = word[0[.split("=")[1]
+
+#CONTINUAR POR AQUI
+
 if __name__ == "__main__":
 
 	if len(sys.argv)!= 2:
