@@ -1,6 +1,6 @@
 <config>
     <account username="eljoker@JAJAJA.com" passwd="Harley"/>
-    <uaserver ip="127.0.0.1" puerto="6001"/>
+    <uaserver ip="127.0.0.1" puerto="5555"/>
     <rtpaudio puerto="2772"/>
     <regproxy ip="127.0.0.1" puerto="6001"/>
     <log path="logua2.txt"/>
