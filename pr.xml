@@ -1,5 +1,6 @@
 <config>
     <server name="DOMINATOR3000" ip="127.0.0.1" puerto="6001"/>
-    <database path="bigdata.txt" passwdpath="passwords.txt"/>
+    <database path="registered.json" passwdpath="passwords.txt"/>
     <log path="logua.txt"/>
 </config>
+
