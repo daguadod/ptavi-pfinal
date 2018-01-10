@@ -1,6 +1,6 @@
 <config>
-    <account username="Batman" passwd="robin"/>
-    <uaserver ip="127.0.0.1" puerto="5001"/>
+    <account username="Batman@gotan.com" passwd="robin"/>
+    <uaserver ip="127.0.0.1" puerto="4444"/>
     <rtpaudio puerto="2662"/>
     <regproxy ip="127.0.0.1" puerto="6001"/>
     <log path="logua1.txt"/>
