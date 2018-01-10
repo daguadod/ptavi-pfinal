@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import sys
-import socket
 import time
+import socket
+import hashlib
 from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
 
@@ -49,24 +50,24 @@ My_Name = tags["account_username"]
 My_Password = tags["account_passwd"]
 My_Port = tags["uaserver_puerto"]
 Proxy_IP = tags["regproxy_ip"]
-Proxy_Port = int(tags["regproxy_puerto"])
+Proxy_Port = tags["regproxy_puerto"]
 log_file = tags["log_path"]
 
 #Creamos o usamos el fichero de registro "log"
 
-def log(log_file, evento):
+def log(log_file, event):
 
-	fichero = open(log_file, 'a')
+	fichero = open(log_file, "a")
 	tiempo = time.gmtime(time.time())
-	fichero.write(time.strftime('%Y%m%d%H%M%S', tiempo))
-	fichero.write(event.replace('\r\n', ' ') + '\r\n')
+	fichero.write(time.strftime("%Y%m%d%H%M%S", tiempo))
+	fichero.write(event.replace("\r\n", " ") + "\r\n")
 	fichero.close()
 
 #Creamos el socket.
 
 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
 	my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-	my_socket.connect((Proxy_IP, Proxy_Port))
+	my_socket.connect((Proxy_IP, int(Proxy_Port)))
 
 #Enviamos mensajes en formato SIP según la terminal de comandos.
 
@@ -76,31 +77,31 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
 		my_socket.send(bytes(LINE, 'utf-8'))
 		print ("Sending: " + LINE)
 		event = " sent to " + Proxy_IP + ":" + str(Proxy_Port) + ":" + LINE
-		Log(log_file, event)
+		log(log_file, event)
 		try:
 			data = my_socket.recv(1024)
-			event = " Received from " + Proxy_IP + ':'
+			event = " Received from " + Proxy_IP + ":"
 			event += str(Proxy_Port) + ": " + data.decode('utf-8')
-			Log(log_file, event)
+			log(log_file, event)
 			DECODED = data.decode('utf-8').split()
 			if DECODED[1] == "401":
-				nonce = DECODED[-1].split('=')[1]
+				nonce = DECODED[-1].split("=")[1]
 				m = hashlib.sha1()
 				m.update(bytes(nonce, 'utf-8'))
-				m.update(bytes(contraseña, 'utf-8'))
+				m.update(bytes(My_Password, 'utf-8'))
 				response = m.hexdigest()
 				LINE += 'Authorization: Digest response=' + response
-				print('Enviando: ' + LINE)
+				print('Sending ' + LINE)
 
-				my_socket.send(bytes(LINE, 'utf-8') + b'\r\n\r\n')
-				evento = ' Sent to ' + proxy_IP + ':'
-				evento += Proxy_Port + ': ' + LINE
-				log(log_file, evento)
+				my_socket.send(bytes(LINE, 'utf-8') + b"\r\n\r\n")
+				event = " Sent to " + Proxy_IP + ":"
+				event += Proxy_Port + ': ' + LINE
+				log(log_file, event)
 
-				data_recv = my_socket.recv(int(proxy_port))
+				data_recv = my_socket.recv(int(Proxy_Port))
 
-				evento = ' Received from ' + proxy_IP + ':'
-				evento += proxy_port + ': ' + data.decode('utf-8')
+				evento = ' Received from ' + Proxy_IP + ':'
+				evento += Proxy_Port + ': ' + data.decode('utf-8')
 				log(log_file, evento)
 
 		except ConnectionRefusedError:
@@ -128,18 +129,18 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
 		log(log_file, event)
 		if len(DECODED) != 0:
 			if DECODED[1] == "100" and DECODED[4] == "180":
-				ACK = "ACK sip:" + OPTION + "SIP/2.0"
-				print("Enviando: " + LINE)
+				ACK = "ACK sip:" + OPTION + " SIP/2.0\r\n"
+				print("Enviando: " + ACK)
 				my_socket.send(bytes(ACK, "utf-8"))
 				event = ' Received from ' + Proxy_IP + ':'
 				event += str(Proxy_Port) + ': ' + data.decode('utf-8')
 				log(log_file, event)
 			elif DECODED[1] == "404":
-			    sys.exit("User not registered, Use REGISTER METHOD")
+			    sys.exit("404 User Not Found")
 
 
 	elif METHOD == "BYE":
-		LINE = METHOD + " sip:" + OPTION + " SIP/2.0"
+		LINE = METHOD + " sip:" + OPTION + " SIP/2.0\r\n"
 		print("Enviando: " + LINE)
 		my_socket.send(bytes(LINE, "utf-8") + b"\r\n")
 		event = ' Sent to ' + Proxy_IP + ':'
