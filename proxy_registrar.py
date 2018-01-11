@@ -112,7 +112,7 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
             if self.expire < now:
                 delete_list.append(client)
         for cliente in delete_list:
-            print("ELIMINADO " + cliente)
+            print("DELETING " + cliente)
             del self.client[cliente]
         self.register2json()
 
@@ -123,7 +123,7 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
         self.json2registered()
         self.delete()
         LINE = self.rfile.read().decode('utf-8')
-        print("El cliente nos manda:" + LINE)
+        print("CLient sends:" + LINE)
         linea = LINE.split()
         METHOD = linea[0]
 
@@ -137,7 +137,7 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
             if "Digest" not in linea:
                 self.nonce.append(str(random.randint(0000, 9999)))
                 answer = METH["Unauthorized"]
-                answer += "WWW Authenticate: Digest nonce="
+                answer += "WWW-Authenticate: Digest nonce="
                 answer += self.nonce[0] + "\r\n\r\n"
                 self.wfile.write(bytes(answer, 'utf-8'))
 
@@ -207,18 +207,19 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
 
                 try:
                     data = my_socket.recv(int(server_port))
-                    data_recived = data.decode('utf-8')           
+                    data_recived = data.decode('utf-8')
 
-                    event = " Recived from " + IP_server
+                    event = " Received from " + IP_server
                     event += ":" + PORT_server + ":" + data_recived
                     log(log_file, event)
 
-                    print("Recibido -- ", data_recived)
+                    print("Received --  ", data_recived)
                     self.wfile.write(bytes(data_recived, 'utf-8'))
                 except ConnectionRefusedError:
                     self.wfile.write(bytes("Connection Refused", 'utf-8'))
                     print("Connection Refused")
-                    event = " Connection Refused " + IP_server + ":" + PORT_server
+                    event = " Connection Refused " + IP_server + ":"
+                    event += PORT_server
                     log(log_file, event)
 
             else:
@@ -276,11 +277,11 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
             data = my_socket.recv(int(server_port))
             data_recived = data.decode('utf-8')
 
-            event = " Recived from " + IP_server + ":"
+            event = " Received from " + IP_server + ":"
             event += PORT_server + ": " + data_recived
             log(log_file, event)
 
-            print("Recibido -- ", data_recived)
+            print(" Received -- ", data_recived)
             self.wfile.write(bytes(data_recived, 'utf-8'))
 
             event = " Sent to " + self.client_address[0] + ":"
