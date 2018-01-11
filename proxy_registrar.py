@@ -190,10 +190,11 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
             user1 = linea[6].split("=")[1]
             user = LINE.split()[1].split(":")[1]
 
-            if user and user1 in self.client.keys():
+            if user in self.client.keys() and user1 in self.client.keys():
 
                 self.json2registered()
                 IP_server = self.client[user][0]
+                print(IP_server)
                 PORT_server = self.client[user][1]
                 my_socket = socket.socket(socket.AF_INET,
                                           socket.SOCK_DGRAM)
