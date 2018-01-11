@@ -6,7 +6,6 @@ import sys
 import time
 import socket
 import hashlib
-import threading
 from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
 
