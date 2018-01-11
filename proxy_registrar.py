@@ -12,10 +12,14 @@ import socketserver
 from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
 
+# Leemos la variable de configuración.
+
 try:
-	fichero = sys.argv[1]
+    fichero = sys.argv[1]
 except IndexError:
-	sys.exit("Usage: python3 proxy_registar.py config")
+    sys.exit("Usage: python3 proxy_registar.py config")
+
+# Creamos las respuestas para los distintos mensajes que nos llegan.
 
 METH = {
     "Trying": b"SIP/2.0 100 Trying\r\n\r\n",
@@ -27,19 +31,22 @@ METH = {
     "Method_Not_Allowed": b"SIP/2.0 405 Method Not Allowed\r\n\r\n"
     }
 
+# Leemos el fichero de configuración.
+
+
 class SmallSMILHandler(ContentHandler):
 
     def __init__(self):
         self.list = {}
         self.att = {"server": ["name", "ip", "puerto"],
-            "database": ["path", "passwdpath"],
-            "log": ["path"]}
-                    
+                    "database": ["path", "passwdpath"],
+                    "log": ["path"]}
+
     def startElement(self, name, attrs):
 
         if name in self.att:
             for att in self.att[name]:
-                self.list[name + "_" + att] = attrs.get(att,"")
+                self.list[name + "_" + att] = attrs.get(att, "")
 
     def get_tags(self):
         return self.list
@@ -50,7 +57,7 @@ parser.setContentHandler(cHandler)
 parser.parse(open(fichero))
 tags = cHandler.get_tags()
 
-#Declaramos las variables de configuración
+# Declaramos las variables de configuración y de los mensajes.
 
 server_name = tags["server_name"]
 server_ip = tags["server_ip"]
@@ -59,7 +66,9 @@ data_path = tags["database_path"]
 pasw_path = tags["database_passwdpath"]
 log_file = tags["log_path"]
 
-#Opcion que configura el fichero log
+# Opcion que configura el fichero log.
+
+
 def log(log_file, event):
     fichero = open(log_file, "a")
     tiempo = time.gmtime(time.time())
@@ -67,6 +76,9 @@ def log(log_file, event):
     event = event.replace("\r\n", " ")
     fichero.write(event + "\r\n")
     fichero.close()
+
+# Creamos la clase para registrar a los distintos usuarios.
+
 
 class RegisterHandler(socketserver.DatagramRequestHandler):
     """
@@ -88,6 +100,8 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
         except:
             self.file_exists = False
 
+# Con el procedimiento delete borramos los usuarios caducados.
+
     def delete(self):
 
         delete_list = []
@@ -102,9 +116,12 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
             del self.client[cliente]
         self.register2json()
 
+# Procedimiento para interactuar con los mensajes que recibimos.
+
     def handle(self):
 
         self.json2registered()
+        self.delete()
         LINE = self.rfile.read().decode('utf-8')
         print("El cliente nos manda:" + LINE)
         linea = LINE.split()
@@ -124,7 +141,6 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
                 answer += self.nonce[0] + "\r\n\r\n"
                 self.wfile.write(bytes(answer, 'utf-8'))
 
-        
                 event = " Sent to " + self.client_address[0] + ":"
                 event += str(self.client_address[1]) + ": "
                 event += answer
@@ -151,14 +167,13 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
                             self.json2registered()
                             self.now = time.time()
                             self.expire_time = float(self.expire) + \
-                                                float(self.now)
+                                float(self.now)
                             self.cliente_lista = []
                             self.cliente_lista.append(self.client_address[0])
                             self.cliente_lista.append(self.port)
                             self.cliente_lista.append(self.now)
                             self.cliente_lista.append(self.expire_time)
                             self.client[self.user] = self.cliente_lista
-                            self.delete()
                             self.cliente_lista = []
                             self.wfile.write(b"SIP/2.0 200 OK\r\n\r\n")
 
@@ -166,15 +181,16 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
                             event += ":" + str(self.port) + ": "
                             event += "SIP/2.0 200 OK\r\n\r\n"
                             log(log_file, event)
-                
+
                 self.register2json()
 
         elif METHOD == "INVITE":
 
             self.json2registered()
+            user1 = linea[6].split("=")[1]
             user = LINE.split()[1].split(":")[1]
 
-            if user in self.client.keys():
+            if user and user1 in self.client.keys():
 
                 self.json2registered()
                 IP_server = self.client[user][0]
@@ -182,33 +198,39 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
                 my_socket = socket.socket(socket.AF_INET,
                                           socket.SOCK_DGRAM)
                 my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                my_socket.connect((IP_server,int(PORT_server)))
+                my_socket.connect((IP_server, int(PORT_server)))
                 my_socket.send(bytes(LINE, 'utf-8'))
 
                 event = " Sent to " + IP_server + ":"
                 event += PORT_server + ": " + LINE
                 log(log_file, event)
 
-                data = my_socket.recv(int(server_port))
-                data_recived = data.decode('utf-8')
+                try:
+                    data = my_socket.recv(int(server_port))
+                    data_recived = data.decode('utf-8')           
 
-                event = " Recived from " + IP_server
-                event += ":" + PORT_server + ":" + data_recived
-                log(log_file, event)
-                
-                print("Recibido -- ", data_recived)
-                self.wfile.write(bytes(data_recived, 'utf-8'))
+                    event = " Recived from " + IP_server
+                    event += ":" + PORT_server + ":" + data_recived
+                    log(log_file, event)
+
+                    print("Recibido -- ", data_recived)
+                    self.wfile.write(bytes(data_recived, 'utf-8'))
+                except ConnectionRefusedError:
+                    self.wfile.write(bytes("Connection Refused", 'utf-8'))
+                    print("Connection Refused")
+                    event = " Connection Refused " + IP_server + ":" + PORT_server
+                    log(log_file, event)
 
             else:
-            
+
                 self.wfile.write(b"SIP/2.0 404 User Not Found\r\n\r\n")
-                
+
                 event = " Sent to " + self.client_address[0] + ":"
                 event += str(self.client_address[1]) + ":" + LINE
                 log(log_file, event)
-                
+
         elif METHOD == "ACK":
-        
+
             self.json2registered()
             user = LINE.split()[1].split(":")[1]
             IP_server = self.client[user][0]
@@ -217,27 +239,27 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
             my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             my_socket.connect((IP_server, int(PORT_server)))
             my_socket.send(bytes(LINE, 'utf-8'))
-            
+
             event = " Sent to " + IP_server + ":" + PORT_server
             event += PORT_server + ":" + LINE
             log(log_file, event)
-            
+
             data = my_socket.recv(int(server_port))
             data_recived = data.decode('utf-8')
-            
+
             event = " received from " + IP_server + ": "
             event += PORT_server + ": " + data_recived
             log(log_file, event)
-            
+
             print("Recibido -- ", data_recived)
             self.wfile.write(bytes(data_recived, 'utf-8') + b"\r\n")
-            
+
             event = " Sent to " + self.client_address[0] + ":"
             event += str(self.client_address[1]) + ": " + LINE
             log(log_file, event)
-            
+
         elif METHOD == "BYE":
-        
+
             self.json2registered()
             user = LINE.split()[1].split(":")[1]
             IP_server = self.client[user][0]
@@ -246,47 +268,44 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
             my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             my_socket.connect((IP_server, int(PORT_server)))
             my_socket.send(bytes(LINE, 'utf-8'))
-            
+
             event = " Sent to " + IP_server + ": " + PORT_server
             event += ": " + LINE
             log(log_file, event)
-            
+
             data = my_socket.recv(int(server_port))
             data_recived = data.decode('utf-8')
-            
+
             event = " Recived from " + IP_server + ":"
             event += PORT_server + ": " + data_recived
             log(log_file, event)
-            
+
             print("Recibido -- ", data_recived)
             self.wfile.write(bytes(data_recived, 'utf-8'))
-            
+
             event = " Sent to " + self.client_address[0] + ":"
             event += str(self.client_address[1]) + ": " + data_recived
             log(log_file, event)
-        
+
         elif METHOD != 'REGISTER' or 'INVITE' or 'ACK' or 'BYE':
-    
+
             answer = "SIP/2.0 405 Method Not Allowed\r\n\r\n"
             self.wfile.write(bytes(answer, 'utf-8'))
-            
+
             event = " Sent to " + self.client_address[0] + ":"
             event += str(self.client_address[1]) + ":" + answer
             log(log_file, event)
-        
+
         else:
-    
+
             answer = "SIP/2.0 400 Bad Request\r\n\r\n"
             self.wfile.write(bytes(answer, 'utf-8'))
-            
+
             event = " Sent to" + self.client_address[0] + ":"
             event += str(self.client_address[1]) + ": " + answer
             log(log_file, event)
-        
-            
 
-
-#CONTINUAR POR AQUI
+# El procedimiento principal con el que creamos le socket server.
 
 if __name__ == "__main__":
 
@@ -294,7 +313,7 @@ if __name__ == "__main__":
     log(log_file, event)
     try:
         serv = socketserver.UDPServer((server_ip, int(server_port)),
-	            RegisterHandler)
+                                      RegisterHandler)
         print(server_name + "listening at port" + server_port + "...")
         serv.serve_forever()
     except KeyboardInterrupt:
