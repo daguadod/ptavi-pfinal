@@ -5,6 +5,7 @@ import os
 import sys
 import time
 import socket
+import threading
 import socketserver
 from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
@@ -97,7 +98,7 @@ class EchoHandler(socketserver.DatagramRequestHandler):
         LINE = linea.split()
         print("Received :" + linea)
         address = self.client_address[0] + ":" + str(self.client_address[1])
-        event = " Recived from" + Proxy_IP + ":" + str(Proxy_Port) + ": "
+        event = " Received from" + Proxy_IP + ":" + str(Proxy_Port) + ": "
         event += linea
         log(log_file, event)
         if LINE[0] == "INVITE":
@@ -125,7 +126,7 @@ class EchoHandler(socketserver.DatagramRequestHandler):
             aEjecutar = "./mp32rtp -i " + self.rtp_list[1] + " -p "
             aEjecutar += self.rtp_list[2]
             aEjecutar += " < " + audio_file
-            print("ACK recibido ejecutando archivo:", aEjecutar)
+            print("ACK received, running file:", aEjecutar)
             os.system(aEjecutar)
             event = ' Sending to ' + self.rtp_list[1] + ":"
             event += self.rtp_list[2] + ": " + "audio_file"
@@ -135,28 +136,28 @@ class EchoHandler(socketserver.DatagramRequestHandler):
 
             ANSW = METHOD["BYE"]
             self.wfile.write(bytes(ANSW, 'utf-8'))
-            print("Recibido" + str(ANSW))
+            print("Received" + str(ANSW))
 
             event = ' Sent to ' + Proxy_IP + ':'
             event += str(Proxy_Port) + ': ' + ANSW
             log(log_file, event)
 
         elif LINE.split()[1] == "200":
-            event = " Recived from" + Proxy_IP + ":" + str(Proxy_Port) + ": "
+            event = " Received from" + Proxy_IP + ":" + str(Proxy_Port) + ": "
             event += linea
             log(log_file, event)
 
         elif not LINE[0] in METHOD:
             ANSW = METHOD["Not_Allowed"]
             self.wfile.write(bytes(ANSW, 'utf-8'))
-            event = ' Sent to ' + Proxy_IP + ':'
+            event = " Sent to " + Proxy_IP + ":"
             event += str(Proxy_Port) + ': ' + ANSW
             log(log_file, event)
 
         else:
             ANSW = METHOD["Bad_Request"]
             self.wfile.write(bytes(ANSW, 'utf-8'))
-            event = ' Sent to ' + proxy_IP + ':'
+            event = " Sent to " + proxy_IP + ":"
             event += Proxy_Port + ': ' + ANSW
             log(log_file, event)
 
@@ -168,6 +169,6 @@ if __name__ == "__main__":
         print("Listening...")
         serv.serve_forever()
     except KeyboardInterrupt:
-        event = ' Finishing uaserver.'
+        event = " Finishing uaserver."
         log(log_file, event)
-        sys.exit('\r\nFinished uaserver')
+        sys.exit("\r\nFinished uaserver")
