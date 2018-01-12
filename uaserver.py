@@ -129,7 +129,7 @@ class EchoHandler(socketserver.DatagramRequestHandler):
             print("ACK received, running file:", aEjecutar)
             os.system(aEjecutar)
             event = ' Sending to ' + self.rtp_list[1] + ":"
-            event += self.rtp_list[2] + ": " + "audio_file"
+            event += self.rtp_list[2] + ": " + audio_file
             log(log_file, event)
 
         elif LINE[0] == "BYE":
