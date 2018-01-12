@@ -139,17 +139,17 @@ with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as my_socket:
         print(decode)
         if len(DECODED) != 0:
             if DECODED[1] == "100" and DECODED[4] == "180":
-                aEjecutar = "./mp32rtp -i " + My_IP + " -p "
-                aEjecutar += RTP_PORT
-                aEjecutar += " < " + audio_file
-                print("Running file:", aEjecutar)
-                os.system(aEjecutar)
                 ACK = "ACK sip:" + OPTION + " SIP/2.0\r\n"
                 print("Sending: " + ACK)
                 my_socket.send(bytes(ACK, 'utf-8'))
                 event = " Sent to " + Proxy_IP + ":"
                 event += str(Proxy_Port) + ': ' + ACK
                 log(log_file, event)
+                aEjecutar = "./mp32rtp -i " + My_IP + " -p "
+                aEjecutar += RTP_PORT
+                aEjecutar += " < " + audio_file
+                print("Running file:", aEjecutar)
+                os.system(aEjecutar)
             elif DECODED[1] == "404":
                 sys.exit("404 User Not Found")
 
