@@ -22,13 +22,13 @@ except IndexError:
 # Creamos las respuestas para los distintos mensajes que nos llegan.
 
 METH = {
-    "Trying": b"SIP/2.0 100 Trying\r\n\r\n",
-    "Ringing": b"SIP/2.0 180 Ringing\r\n\r\n",
-    "Ok": b"SIP/2.0 200 OK\r\n\r\n",
-    "Bad Request": b"SIP/2.0 400 Bad Request\r\n\r\n",
-    "Unauthorized": "SIP/2.0 401 Unauthorized\r\n\r\n",
-    "User_Not_Found": b"SIP/2.0 404 User Not Found\r\n\r\n",
-    "Method_Not_Allowed": b"SIP/2.0 405 Method Not Allowed\r\n\r\n"
+    "Trying": "SIP/2.0 100 Trying\r\n\r\n",
+    "Ringing": "SIP/2.0 180 Ringing\r\n\r\n",
+    "Ok": "SIP/2.0 200 OK\r\n\r\n",
+    "Bad Request": "SIP/2.0 400 Bad Request\r\n\r\n",
+    "Unauthorized": "SIP/2.0 401 Unauthorized\r\n",
+    "User_Not_Found": "SIP/2.0 404 User Not Found\r\n\r\n",
+    "Not_Allowed": "SIP/2.0 405 Method Not Allowed\r\n\r\n"
     }
 
 # Leemos el fichero de configuración.
@@ -88,17 +88,16 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
     nonce = []
 
     def register2json(self):
-
-        json.dump(self.client, open("registered.json", "w"))
+        with open(data_path, "w") as client_file:
+            json.dump(self.client, client_file)
 
     def json2registered(self):
 
         try:
-            with open("registered.json") as client_file:
+            with open(data_path) as client_file:
                 self.client = json.load(client_file)
-                self.file_exists = True
         except:
-            self.file_exists = False
+            pass
 
 # Con el procedimiento delete borramos los usuarios caducados.
 
@@ -123,7 +122,7 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
         self.json2registered()
         self.delete()
         LINE = self.rfile.read().decode('utf-8')
-        print("CLient sends:" + LINE)
+        print("Client sends:" + LINE)
         linea = LINE.split()
         METHOD = linea[0]
 
@@ -175,11 +174,11 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
                             self.cliente_lista.append(self.expire_time)
                             self.client[self.user] = self.cliente_lista
                             self.cliente_lista = []
-                            self.wfile.write(b"SIP/2.0 200 OK\r\n\r\n")
+                            self.wfile.write(bytes(METH["Ok"], 'utf-8'))
 
                             event = " Sent to " + self.client_address[0]
                             event += ":" + str(self.port) + ": "
-                            event += "SIP/2.0 200 OK\r\n\r\n"
+                            event += METH["Ok"]
                             log(log_file, event)
 
                 self.register2json()
@@ -207,6 +206,7 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
                 log(log_file, event)
 
                 try:
+
                     data = my_socket.recv(int(server_port))
                     data_recived = data.decode('utf-8')
 
@@ -216,7 +216,13 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
 
                     print("Received --  ", data_recived)
                     self.wfile.write(bytes(data_recived, 'utf-8'))
+
+                    event = " Sent to " + self.client_address[0] + ":"
+                    event += str(self.client_address[1]) + ":" + LINE
+                    log(log_file, event)
+                    
                 except ConnectionRefusedError:
+
                     self.wfile.write(bytes("Connection Refused", 'utf-8'))
                     print("Connection Refused")
                     event = " Connection Refused " + IP_server + ":"
@@ -225,11 +231,7 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
 
             else:
 
-                self.wfile.write(b"SIP/2.0 404 User Not Found\r\n\r\n")
-
-                event = " Sent to " + self.client_address[0] + ":"
-                event += str(self.client_address[1]) + ":" + LINE
-                log(log_file, event)
+                self.wfile.write(bytes(METH["User_Not_Found"], 'utf-8'))
 
         elif METHOD == "ACK":
 
@@ -237,28 +239,21 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
             user = LINE.split()[1].split(":")[1]
             IP_server = self.client[user][0]
             PORT_server = self.client[user][1]
-            my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            my_socket.connect((IP_server, int(PORT_server)))
-            my_socket.send(bytes(LINE, 'utf-8'))
 
-            event = " Sent to " + IP_server + ":" + PORT_server
-            event += PORT_server + ":" + LINE
-            log(log_file, event)
+            if user in self.client.keys():
 
-            data = my_socket.recv(int(server_port))
-            data_recived = data.decode('utf-8')
+                my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                my_socket.connect((IP_server, int(PORT_server)))
+                my_socket.send(bytes(LINE, 'utf-8'))
 
-            event = " received from " + IP_server + ": "
-            event += PORT_server + ": " + data_recived
-            log(log_file, event)
+                event = " Sent to " + IP_server + ":" + PORT_server
+                event += PORT_server + ":" + LINE
+                log(log_file, event)
 
-            print("Recibido -- ", data_recived)
-            self.wfile.write(bytes(data_recived, 'utf-8') + b"\r\n")
+            else:
 
-            event = " Sent to " + self.client_address[0] + ":"
-            event += str(self.client_address[1]) + ": " + LINE
-            log(log_file, event)
+                self.wfile.write(bytes(METH["User_Not_Found"], 'utf-8'))
 
         elif METHOD == "BYE":
 
@@ -266,32 +261,39 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
             user = LINE.split()[1].split(":")[1]
             IP_server = self.client[user][0]
             PORT_server = self.client[user][1]
-            my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            my_socket.connect((IP_server, int(PORT_server)))
-            my_socket.send(bytes(LINE, 'utf-8'))
 
-            event = " Sent to " + IP_server + ": " + PORT_server
-            event += ": " + LINE
-            log(log_file, event)
+            if user in self.client.keys():
 
-            data = my_socket.recv(int(server_port))
-            data_recived = data.decode('utf-8')
+                my_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                my_socket.connect((IP_server, int(PORT_server)))
+                my_socket.send(bytes(LINE, 'utf-8'))
 
-            event = " Received from " + IP_server + ":"
-            event += PORT_server + ": " + data_recived
-            log(log_file, event)
+                event = " Sent to " + IP_server + ": " + PORT_server
+                event += ": " + LINE
+                log(log_file, event)
 
-            print(" Received -- ", data_recived)
-            self.wfile.write(bytes(data_recived, 'utf-8'))
+                data = my_socket.recv(int(server_port))
+                data_recived = data.decode('utf-8')
 
-            event = " Sent to " + self.client_address[0] + ":"
-            event += str(self.client_address[1]) + ": " + data_recived
-            log(log_file, event)
+                event = " Received from " + IP_server + ":"
+                event += PORT_server + ": " + data_recived
+                log(log_file, event)
+
+                print(" Received -- ", data_recived)
+                self.wfile.write(bytes(data_recived, 'utf-8'))
+
+                event = " Sent to " + self.client_address[0] + ":"
+                event += str(self.client_address[1]) + ": " + data_recived
+                log(log_file, event)
+
+            else:
+
+                self.wfile.write(bytes(METH["User_Not_Found"], 'utf-8'))
 
         elif METHOD != 'REGISTER' or 'INVITE' or 'ACK' or 'BYE':
 
-            answer = "SIP/2.0 405 Method Not Allowed\r\n\r\n"
+            answer = METH["Not_Allowed"]
             self.wfile.write(bytes(answer, 'utf-8'))
 
             event = " Sent to " + self.client_address[0] + ":"
@@ -300,7 +302,7 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
 
         else:
 
-            answer = "SIP/2.0 400 Bad Request\r\n\r\n"
+            answer = METH["Bad Request"]
             self.wfile.write(bytes(answer, 'utf-8'))
 
             event = " Sent to" + self.client_address[0] + ":"
