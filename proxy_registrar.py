@@ -220,7 +220,7 @@ class RegisterHandler(socketserver.DatagramRequestHandler):
                     event = " Sent to " + self.client_address[0] + ":"
                     event += str(self.client_address[1]) + ":" + LINE
                     log(log_file, event)
-                    
+
                 except ConnectionRefusedError:
 
                     self.wfile.write(bytes("Connection Refused", 'utf-8'))
